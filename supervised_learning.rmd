@@ -1,0 +1,331 @@
+---
+title: "Assignment 09: Supervised Learning 1"
+author: "Aaron Riedling"
+output: html_document
+---
+
+This assignment focuses on supervised learning in the context of biological classification.
+You will work with the famous `iris` dataset, which contains measurements of different iris flower species.
+The goal is to implement and evaluate Linear Discriminant Analysis (LDA) for species classification.
+To evaluate the models, you will use cross-validation and analyze the performance metrics.
+
+## Task 1 (30 pts)
+### Data Preparation and Cross-Validation Setup
+
+Create a function called `create_cv_splits` that prepares the data for cross-validation:
+
+1. Load the `iris` dataset
+2. Implement sampling which maintains class balance
+3. Create multiple training-test splits
+4. Return the splits in an appropriate data structure
+
+Your function should have the following properties:
+
+- Input parameters: dataset, training_proportion (default 0.7), cv_count (default 3)
+- Ensure stratified sampling (maintain class proportions)
+- Return value: A list containing cv_count splits, each with training and test indices
+- Visualize your data the following way:
+  - Draw a scatter plot of the sepal length and width, colored by species, each split should have a different shade of the same color.
+
+![](../../assignment09/iris_scatterplot.png)
+
+```{r task1_test}
+# Your solution here!
+
+library(ggplot2)
+library(caret)  
+
+# Function to create cross-validation splits
+create_cv_splits <- function(dataset, training_proportion = 0.7, cv_count = 3) {
+  # Set seed for reproducibility
+  set.seed(123)
+  
+  # Create a list to store the splits
+  splits <- list()
+  
+  # Create cv_count splits with stratified sampling
+  for (i in 1:cv_count) {
+    # Stratified sampling for cross-validation using createDataPartition
+    trainIndex <- createDataPartition(dataset$Species, p = training_proportion, list = FALSE)
+    
+    # Split the dataset into training and test sets
+    training_data <- dataset[trainIndex, ]
+    test_data <- dataset[-trainIndex, ]
+    
+    # Store each split (training and test indices)
+    splits[[i]] <- list(train = trainIndex, test = setdiff(1:nrow(dataset), trainIndex))
+  }
+  
+  # Return the list of splits
+  return(splits)
+}
+
+# Load the iris dataset
+data(iris)
+
+# Create the cross-validation splits
+cv_splits <- create_cv_splits(iris)
+
+# Visualization of the splits with different shades for each split
+for (i in 1:length(cv_splits)) {
+  split <- cv_splits[[i]]
+  
+  # Extract the training and testing datasets
+  training_data <- iris[split$train, ]
+  test_data <- iris[split$test, ]
+  
+  # Create the scatter plot of sepal length and width
+  plot <- ggplot() + 
+    geom_point(data = training_data, aes(x = Sepal.Length, y = Sepal.Width, color = Species), alpha = 0.7) +
+    geom_point(data = test_data, aes(x = Sepal.Length, y = Sepal.Width, color = Species), shape = 1, alpha = 0.7) +
+    scale_color_manual(values = c("setosa" = "red", "versicolor" = "blue", "virginica" = "green")) +
+    labs(title = paste("CV Split", i), x = "Sepal Length", y = "Sepal Width") +
+    theme_minimal() +
+    theme(legend.position = "top")
+  
+  # Print the plot explicitly for each split
+  print(plot)
+}
+
+
+
+
+
+```
+
+## Task 2 (35 pts)
+### LDA Model Implementation
+
+Using the splits created in Task 1, implement the LDA algorithm with different feature combinations:
+
+1. Create three different feature sets:
+   
+   - Model 1: Use only sepal measurements
+   - Model 2: Use only petal measurements
+   - Model 3: Use all measurements
+
+2. Train these models on each of the training splits from Task 1
+
+```{r task2_test}
+# Your solution here!
+
+
+library(MASS)    
+  
+
+# Define function for training LDA models
+train_lda_models <- function(dataset, cv_splits) {
+  models <- list()  # To store models for all splits and feature sets
+  
+  # Feature sets
+  feature_sets <- list(
+    model1 = c("Sepal.Length", "Sepal.Width"),  # Sepal measurements
+    model2 = c("Petal.Length", "Petal.Width"),  # Petal measurements
+    model3 = c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width")  # All measurements
+  )
+  
+  # Loop over each split
+  for (i in seq_along(cv_splits)) {
+    split <- cv_splits[[i]]
+    train_data <- dataset[split$train, ]
+    split_models <- list()  # To store models for each feature set
+    
+    # Train LDA for each feature set
+    for (model_name in names(feature_sets)) {
+      features <- feature_sets[[model_name]]
+      formula <- as.formula(paste("Species ~", paste(features, collapse = " + ")))
+      
+      # Use MASS::lda explicitly to avoid conflicts with dplyr
+      lda_model <- MASS::lda(formula, data = train_data)
+      split_models[[model_name]] <- lda_model
+    }
+    
+    # Store models for this split
+    models[[paste0("Split_", i)]] <- split_models
+  }
+  
+  return(models)
+}
+
+# Train LDA models using the splits created earlier
+lda_models <- train_lda_models(iris, cv_splits)
+
+
+
+print(lda_models$Split_1$model1)
+print(lda_models$Split_3$model2)  
+print(lda_models$Split_3$model3) 
+
+
+
+
+
+
+
+```
+
+## Task 3 (35 pts)
+### Model Evaluation and Performance Analysis
+
+Evaluate the performance of your models:
+
+1. Create a function that calculates:
+   
+   - Confusion matrix
+   - Accuracy
+
+2. Compare the performance across:
+
+   - Different feature sets
+   - Training vs test sets
+   - Different cross-validation splits
+
+3. Visualize the results using appropriate plots (e.g., boxplots)
+
+```{r task3_test}
+# Your solution here!
+
+library(caret)  
+library(ggplot2) 
+
+# Function to calculate confusion matrix and accuracy
+evaluate_model_performance <- function(models, dataset, cv_splits) {
+  performance <- data.frame(
+    Split = character(),
+    Feature_Set = character(),
+    Data_Set = character(),
+    Accuracy = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Loop over each split and feature set
+  for (split_name in names(models)) {
+    split_models <- models[[split_name]]
+    split_index <- as.numeric(gsub("Split_", "", split_name))  # Extract split number
+    split <- cv_splits[[split_index]]
+    
+    # Loop over each feature set
+    for (model_name in names(split_models)) {
+      model <- split_models[[model_name]]
+      
+      # Extract training and test datasets
+      train_data <- dataset[split$train, ]
+      test_data <- dataset[split$test, ]
+      
+      # Ensure the factor levels are consistent across both training and test data
+      levels <- levels(train_data$Species)  # Get the factor levels from the training data
+      train_data$Species <- factor(train_data$Species, levels = levels)  
+      test_data$Species <- factor(test_data$Species, levels = levels)  
+      
+      # Get predictions for training and test data
+      train_pred <- predict(model, train_data)$class  
+      test_pred <- predict(model, test_data)$class  
+      
+      # Ensure the predictions are factors with the same levels
+      train_pred <- factor(train_pred, levels = levels)
+      test_pred <- factor(test_pred, levels = levels)
+      
+      # Calculate confusion matrix and accuracy for both training and test data
+      train_cm <- confusionMatrix(train_pred, train_data$Species)
+      test_cm <- confusionMatrix(test_pred, test_data$Species)
+      
+      # Store accuracy for both training and test data
+      performance <- rbind(performance, data.frame(
+        Split = split_name,
+        Feature_Set = model_name,
+        Data_Set = "Train",
+        Accuracy = train_cm$overall['Accuracy']
+      ))
+      performance <- rbind(performance, data.frame(
+        Split = split_name,
+        Feature_Set = model_name,
+        Data_Set = "Test",
+        Accuracy = test_cm$overall['Accuracy']
+      ))
+    }
+  }
+  
+  return(performance)
+}
+
+# Evaluate model performance
+performance_results <- evaluate_model_performance(lda_models, iris, cv_splits)
+
+# View the performance results
+print(performance_results)
+
+# Boxplot to visualize accuracy across splits, feature sets, and datasets
+ggplot(performance_results, aes(x = Feature_Set, y = Accuracy, fill = Data_Set)) +
+  geom_boxplot() +
+  facet_wrap(~Split) +
+  labs(title = "Model Performance Comparison",
+       x = "Feature Set",
+       y = "Accuracy") +
+  theme_minimal() +
+  theme(legend.position = "top")
+
+
+
+
+
+
+```
+
+
+# Task 4 (Bonus) (10pts)
+You are provided with a set of points in a 2D space, each x and y coordinate has iris features attached to it.
+Use the best model from Task 3 to classify the points provided in the `generated_points.csv` file.
+Visualize the data by classifying the points using the LDA model(using the features in the data) and coloring them accordingly.
+Plot the data using the x and y coordinates and color them based on the predicted class.
+
+- Set the colors to:
+  - setosa: red
+  - versicolor: yellow
+  - virginica: black (to the background color of your plot)
+- Set the transparency of the points to 0.5
+- Use a fixed aspect ratio for the plot
+- Set the size of the points to .2
+
+```{r task4}
+# Your solution here!
+
+
+library(MASS)    
+library(ggplot2) 
+library(readr)   
+
+
+generated_points <- read_csv("generated_points.csv", show_col_types = FALSE)
+
+str(generated_points)
+
+
+
+# Load the best LDA model (from previous task - Model 3)
+best_lda_model <- lda(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width, data = iris)
+
+# Make predictions for the generated points using the model
+generated_points$Species <- predict(best_lda_model, newdata = generated_points)$class
+
+# Visualize the classified points using ggplot2
+ggplot(generated_points, aes(x = x, y = y, color = Species)) +
+  geom_point(alpha = 0.5, size = 0.2) +  
+  scale_color_manual(values = c("setosa" = "red", "versicolor" = "yellow", "virginica" = "black")) +
+  theme_minimal() +
+  coord_fixed() +  
+  labs(title = "Classification of Points using LDA",
+       x = "X Coordinate",
+       y = "Y Coordinate") +
+  theme(legend.position = "top")
+
+
+
+
+
+
+
+
+
+
+
+```
