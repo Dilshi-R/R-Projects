@@ -1,0 +1,498 @@
+---
+title: "Assignment 2: Modeling"
+Author: Aaron Riedling
+---
+For this notebook, please have read chapter 1 and 2 of **Modern Statistics for Modern Biology**.
+
+
+## Task 1: Exploring Probability Distributions (20pts)
+a) Create a function called explore_distribution that provides an overview of
+probability distributions commonly used in biological data analysis. Your function should:
+
+- Accept one input parameter dist_type with possible values: "binomial", "poisson", or "multinomial"
+
+For each distribution type, the function should:
+
+- Generate a representative sample of data (use n=1000 for good visualization)
+- Create a histogram of the sampled data
+- Overlay the theoretical probability density function
+- Print the key parameters that define the distribution
+- Calculate and print the mode (most probable value)
+
+
+For the multinomial case specifically:
+
+- Create separate histograms for each category
+- Use appropriate probabilities for each category (e.g., 0.3, 0.5, 0.2)
+
+Use these parameters for each distribution:
+
+- Binomial: n=10, p=0.5
+- Poisson: lambda=5
+- Multinomial: n=100, probs=c(0.3, 0.5, 0.2)
+
+```{r task1a_distribution_explorer}
+# Your solution here!
+
+# Define functions for each distribution type
+explore_binomial=function(){
+  
+  set.seed(123)
+  n=1000
+  p_binom=0.5
+  sample_data=rbinom(n,size=10,prob=p_binom)
+  
+  # calculate parameters
+  
+  mean_val=mean(sample_data)
+  variance_val=var(sample_data)
+  mode_val = as.numeric(names(sort(table(sample_data), decreasing = TRUE))[1])
+
+
+  
+  # print parameters
+  cat("Binomial Distribution:\n")
+  cat("n(trials):10 \n")
+  cat("p (sucess probability): ",p_binom,"\n")
+  cat("sample mean:",mean_val,"\n")
+  cat("sample variance:",variance_val,"\n")
+  cat("sample mode:",mode_val,"\n")
+  
+  #plot histogram
+  
+  hist(sample_data, breaks = seq(-0.5, 10.5, by = 1), probability = TRUE,
+       xlab = "Sample Values", ylab = "Density", col = "lightblue", border = "black",
+       main = "Histogram of Binomial Distribution with PDF Overlay")
+  
+  # Overlay binomial density function
+  points(0:10, dbinom(0:10, size = 10, prob = p_binom), type = "h", col = "red", lwd = 2)
+  
+  
+}
+explore_binomial()
+
+
+explore_poisson=function(){
+  set.seed(123)
+  n=1000
+  lambda_poisson=5
+  sample_data=rpois(n,lambda=lambda_poisson)
+  
+  # calculate parameters
+  mean_val=mean(sample_data)
+  variance_val=var(sample_data)
+  mode_val=floor(lambda_poisson)
+
+  cat("Poisson Distribution \n")
+  cat("lambda(rate):lambda_poisson, \n")
+  cat("Sample Mean:",mean_val,"\n")
+  cat("Sample Variance",variance_val,"\n")
+  cat("Mode:",mode_val,"\n")
+  
+  hist(sample_data, breaks = seq(-0.5, max(sample_data) + 0.5, by = 1), probability = TRUE,
+       main = "Histogram of Poisson Distribution with PDF Overlay", xlab = "Sample Values", 
+       ylab = "Density", col = "lightblue", border = "black")
+  # Overlay Poisson density function
+  points(0:max(sample_data), dpois(0:max(sample_data), lambda = lambda_poisson), type = "h", col = "red", lwd = 2)
+  
+}
+explore_poisson()
+
+explore_multinomial <- function() {
+  set.seed(123)
+  n_samples <- 1000  # Number of samples (experiments)
+  size <- 100  # Number of trials per sample
+  probs <- c(0.3, 0.5, 0.2)  # Probabilities for each category
+
+  # Generate multinomial samples
+  samples <- rmultinom(n_samples, size = size, prob = probs)
+
+  # Calculate key parameters
+  means <- size * probs
+  variances <- size * probs * (1 - probs)
+  modes <- floor(size * probs)  # Mode is approximately n*p rounded down
+
+  # Print parameters for each category
+  cat("Multinomial Distribution Parameters:\n")
+  for (i in 1:length(probs)) {
+    cat(sprintf("Category %d:\n", i))
+    cat(sprintf("  Probability (p): %.2f\n", probs[i]))
+    cat(sprintf("  Mean: %.2f\n", means[i]))
+    cat(sprintf("  Variance: %.2f\n", variances[i]))
+    cat(sprintf("  Mode: %d\n", modes[i]))
+  }
+  
+  # Plot histograms with binomial approximation overlay
+  par(mfrow = c(1, 3))  # Set up a 1x3 plot layout
+  category_labels <- c("Category 1 (p = 0.3)", "Category 2 (p = 0.5)", "Category 3 (p = 0.2)")
+  
+  for (i in 1:3) {
+    # Histogram of the sample counts for each category
+    hist(samples[i, ], breaks = 20, probability = TRUE, main = category_labels[i],
+         xlab = "Counts", col = "lightblue", border = "black")
+
+    # Overlay binomial theoretical density
+    x_vals <- 0:size  
+    density_vals <- dbinom(x_vals, size = size, prob = probs[i])  
+    points(x_vals, density_vals, type = "h", col = "red", lwd = 2)
+  }
+}
+
+explore_multinomial()
+
+
+```
+
+b) Use your `explore_distribution` function to analyze each distribution type (max. 100 words). For each:
+1. Generate the visualization
+2. Interpret the key parameters
+3. Explain how the shape of the distribution changes with different parameter values
+# Your solution here!
+Binomial Distribution:- Visualization:A histogram of sample data with a red line showing the binomial probability mass function (PMF). 
+Key Parameters: n(trials):10 ,p(sucess probability):0.5 ,sample mean: 4.975 ,sample variance: 2.556932 ,sample mode: 5
+Interpretation: As n increases, the binomial distribution becomes more symmetric, approaching a normal distribution. Decreasing p shifts the    distribution towards lower values, while increasing p shifts it towards higher values.
+
+poisson Distribution:-visualization: A histogram of sample data with a red line showing the Poisson probability mass function.
+Key Parameters:lambda(rate):lambda_poisson, Sample Mean: 4.981 ,Sample Variance 4.849488 ,Mode: 5 
+Interpretation:The distribution becomes more spread out and less symmetric as λ increases. As λ decreases, it becomes more skewed towards 0.
+
+mutinomial distribution: Three histograms, each for a category, with the red line showing the binomial approximation for each category.
+key parameters: Category 1:Probability (p): 0.30, Mean: 30.00,Variance: 21.00,Mode: 30
+Category 2:Probability (p): 0.50,Mean: 50.00,Variance: 25.00,Mode: 50
+Category 3:Probability (p): 0.20,Mean: 20.00,Variance: 16.00,Mode: 20
+Interpretation: With a larger number of trials, the distribution becomes more concentrated around its expected value. 
+  
+
+
+
+c) Answer the following questions(each less than 20 words):
+
+1. What is the key difference between the bernoulli and binomial distribution?
+2. What is the relationship between the mean and variance in a Poisson distribution?
+3. How does the multinomial distribution extend the binomial distribution```{r task1c_questions}
+
+# Your solution here!
+1. Bernoulli models single trials; Binomial models multiple independent trials.
+2.In Poisson, mean equals variance (λ).
+3. Multinomial models outcomes with more than two categories per trial.
+
+
+
+## Task 2: Probabilistic Modeling (30pts)
+
+a) A hospital has a median birth rate of 1.8 births per hour. Use the Poisson
+distribution to model birth occurrences:
+- Calculate how many delivery rooms are needed to ensure 95% probability that
+each birth has an available room
+- Assume each delivery blocks the room for 1 hour.
+- Plot the probability mass function and cumulative probability.
+- Print the minimum number of rooms needed.
+
+```{r task2a_delivery_rooms}
+# Your solution here!
+
+# Parameters
+lambda <- 1.8   # average birth rate per hour
+target_prob <- 0.95  # required probability of having an available room
+
+# Calculate minimum number of rooms required
+min_rooms <- 0
+while (ppois(min_rooms - 1, lambda, lower.tail = TRUE) < target_prob) {
+  min_rooms <- min_rooms + 1
+}
+
+# Print the minimum number of rooms needed
+cat("Minimum number of delivery rooms needed:", min_rooms, "\n")
+
+# Plot Probability Mass Function (PMF) of Poisson distribution
+x_vals <- 0:10
+pmf_vals <- dpois(x_vals, lambda)
+plot(x_vals, pmf_vals, type = "h", lwd = 2, col = "blue",
+     main = "Poisson PMF for Birth Rate (lambda = 1.8)",
+     xlab = "Number of births in an hour", ylab = "Probability")
+
+# Plot Cumulative Distribution Function (CDF) of Poisson distribution
+cdf_vals <- ppois(x_vals, lambda)
+plot(x_vals, cdf_vals, type = "s", lwd = 2, col = "red",
+     main = "Poisson CDF for Birth Rate (lambda = 1.8)",
+     xlab = "Number of births in an hour", ylab = "Cumulative Probability")
+
+
+
+```
+
+b) In a genetic screening, each person has a 15% chance of carrying a specific mutation.
+Use the binomial distribution:
+- Calculate how many people need to be screened to ensure 99% probability of finding at least one carrier.
+- Show your calculation steps and visualize the probability distribution.
+
+```{r task2b_mutation_screening}
+# Your solution here!
+# Parameters
+p <- 0.15          # Probability of carrying the mutation
+target_prob <- 0.99  # Required probability of finding at least one carrier
+
+# Calculate minimum number of people needed
+n <- 1
+while ((1 - p)^n > 1 - target_prob) {
+  n <- n + 1
+}
+
+# Print the minimum number of people needed
+cat("Minimum number of people to screen:", n, "\n")
+
+# Visualize the Binomial Probability Distribution
+# Probability mass function for 0 to n carriers
+x_vals <- 0:n
+prob_vals <- dbinom(x_vals, size = n, prob = p)
+plot(x_vals, prob_vals, type = "h", lwd = 2, col = "purple",
+     main = paste("Binomial PMF with", n, "People (p = 0.15)"),
+     xlab = "Number of Carriers", ylab = "Probability")
+
+# Highlight the probability of finding at least one carrier
+cdf_vals <- pbinom(x_vals, size = n, prob = p)
+plot(x_vals, cdf_vals, type = "s", lwd = 2, col = "green",
+     main = paste("Binomial CDF with", n, "People (p = 0.15)"),
+     xlab = "Number of Carriers", ylab = "Cumulative Probability")
+
+
+
+```
+
+c) Given the following nucleotide frequencies in a bacterial genome:
+- A: 24%
+- C: 26%
+- G: 26%
+- T: 24%
+  
+Using the multinomial distribution, calculate the probability of observing exactly [3,2,2,3] nucleotides.
+```{r task2c_dna_sequence}
+# Your solution here!
+# Define parameters
+p_A <- 0.24
+p_C <- 0.26
+p_G <- 0.26
+p_T <- 0.24
+x_A <- 3
+x_C <- 2
+x_G <- 2
+x_T <- 3
+n <- x_A + x_C + x_G + x_T  # Total observations
+
+# Calculate multinomial probability
+prob <- factorial(n) / (factorial(x_A) * factorial(x_C) * factorial(x_G) * factorial(x_T)) *
+        (p_A^x_A) * (p_C^x_C) * (p_G^x_G) * (p_T^x_T)
+
+# Print the result
+cat("The probability of observing exactly [3,2,2,3] nucleotides is:", prob, "\n")
+
+
+
+``` 
+
+## Task 3: Statistical Modeling (30pts)
+a) Generate 1,000 random 0/1 variables that model mutations occurring along a 1,000 long gene sequence.
+These occur independently at a rate of 1/1000 each. Then sum the 1,000 positions
+to count how many mutations in sequences of length 1,000. Find the correct distribution for these mutation sums using a goodness of fit
+test and make a plot to visualize the quality of the fit.
+
+```{r task3a_mutation_simulation}
+# Your solution here!
+
+# Parameters
+n_sequences <- 1000        # Number of sequences
+sequence_length <- 1000    # Length of each sequence
+mutation_rate <- 1 / 1000  # Probability of mutation per position
+
+# Generate mutation data
+set.seed(42)  # For reproducibility
+mutation_data <- matrix(rbinom(n_sequences * sequence_length, 1, mutation_rate),
+                        nrow = n_sequences, ncol = sequence_length)
+
+# Count mutations per sequence by summing each row
+mutation_sums <- rowSums(mutation_data)
+
+# Calculate the mean number of mutations per sequence
+lambda_estimate <- mean(mutation_sums)
+
+# Observed mutation count frequencies
+observed_counts <- table(mutation_sums)
+
+# Calculate expected frequencies from Poisson distribution
+expected_counts <- dpois(as.numeric(names(observed_counts)), lambda_estimate) * n_sequences
+
+# Combine small categories with expected counts below a threshold (e.g., 5)
+threshold <- 5
+small_categories <- which(expected_counts < threshold)
+
+# Combine small categories into one
+if (length(small_categories) > 0) {
+  # Merge small categories
+  combined_observed <- observed_counts
+  combined_expected <- expected_counts
+  
+  # Add small categories to the last one
+  combined_observed[length(combined_observed)] <- combined_observed[length(combined_observed)] + sum(combined_observed[small_categories])
+  combined_expected[length(combined_expected)] <- sum(combined_expected[small_categories])
+  
+  # Remove the small categories
+  combined_observed <- combined_observed[-small_categories]
+  combined_expected <- combined_expected[-small_categories]
+  
+  # Perform chi-squared test on the combined data
+  chisq_test <- chisq.test(x = combined_observed, p = combined_expected / sum(combined_expected))
+} else {
+  # If no small categories, perform the chi-squared test normally
+  chisq_test <- chisq.test(x = observed_counts, p = expected_counts / sum(expected_counts))
+}
+
+# Print chi-squared test result
+print(chisq_test)
+
+# Plot histogram of observed mutation sums
+hist(mutation_sums, breaks = max(mutation_sums), freq = FALSE, col = "lightblue",
+     main = "Observed Mutation Counts with Poisson Fit",
+     xlab = "Number of Mutations per Sequence")
+
+# Overlay the Poisson distribution using integer x values
+x_vals <- 0:max(mutation_sums)  # Integer values only
+points(x_vals, dpois(x_vals, lambda_estimate), col = "red", type = "h", lwd = 2)
+
+# Add a legend
+legend("topright", legend = c("Observed", "Poisson Fit"), col = c("lightblue", "red"), lwd = 2, fill = c("lightblue", NA))
+
+
+
+
+
+
+
+
+```
+
+b) You are studying the maximum expression level in a gene expression dataset. Create a function that:
+
+1. Generates n random uniform numbers between 0 and 1
+2. Returns their maximum value
+3. Repeats this process 1000 times for n=25
+4. Plots the distribution of these maxima
+
+Answer these questions:
+
+1. What is the maximum likelihood estimate (MLE) of the maximum value? 0.9632758
+2. What is the theoretical maximum for n=25?  0.9615385 
+3. Explain any discrepancy between the MLE and theoretical maximum? MLE is based on 1000 simulated samples, there will likely be a small difference between it and the theoretical maximum due to sampling variability.
+
+```{r task3b_mutation_simulation}
+# Your solution here!
+# Set parameters
+n <- 25             # Number of uniform random variables in each set
+repetitions <- 1000 # Number of repetitions
+
+# Function to generate maxima
+generate_maxima <- function(n, repetitions) {
+  maxima <- numeric(repetitions)
+  
+  for (i in 1:repetitions) {
+    random_numbers <- runif(n)      # Generate n uniform random numbers between 0 and 1
+    maxima[i] <- max(random_numbers) # Find the maximum and store it
+  }
+  
+  return(maxima)
+}
+
+# Generate 1000 maxima values for samples of size 25
+maxima_values <- generate_maxima(n, repetitions)
+
+# Plot the histogram of maxima values
+hist(maxima_values, breaks = 30, main = "Distribution of Maximum Values",
+     xlab = "Maximum Value", col = "lightblue", border = "black")
+
+# MLE of the maximum value (sample mean of maxima)
+mle_maximum <- mean(maxima_values)
+cat("MLE of the maximum value:", mle_maximum, "\n")
+
+# Theoretical expected maximum for n=25
+theoretical_maximum <- n / (n + 1)
+cat("Theoretical expected maximum:", theoretical_maximum, "\n")
+
+# Display both values
+mle_maximum
+theoretical_maximum
+
+
+
+
+
+```
+
+
+## Task 4: Distribution Selection (20pts)
+
+a) Consider the mut_data vector, where each position represents a gene and its
+mutation status (1 = mutated, 0 = not mutated). Using the log-likelihood function,
+determine whether the Poisson or Binomial distribution better describes this data
+and justify your choice.
+
+```{r}
+mut_data <- c(0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+              0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+              0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+              0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+              0, 0, 0, 1, 0, 0, 0, 1, 1, 0)
+```
+```{r task4a_simulation}
+# Your solution here!
+
+# Mutation data
+mut_data <- c(0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+              0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+              0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+              0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+              0, 0, 0, 1, 0, 0, 0, 1, 1, 0)
+
+# Parameters
+n <- length(mut_data)
+p_hat <- mean(mut_data)            # Estimate for Binomial (proportion of 1's)
+lambda_hat <- sum(mut_data) / n    # Estimate for Poisson (average mutation count)
+
+# Log-likelihood for Binomial distribution
+binom_log_likelihood <- sum(dbinom(mut_data, size = 1, prob = p_hat, log = TRUE))
+
+# Log-likelihood for Poisson distribution
+poisson_log_likelihood <- sum(dpois(mut_data, lambda = lambda_hat, log = TRUE))
+
+# Output results
+cat("Binomial Log-Likelihood:", binom_log_likelihood, "\n")
+cat("Poisson Log-Likelihood:", poisson_log_likelihood, "\n")
+
+# Decision
+if (binom_log_likelihood > poisson_log_likelihood) {
+  cat("The Binomial distribution is a better fit.\n")
+} else {
+  cat("The Poisson distribution is a better fit.\n")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
