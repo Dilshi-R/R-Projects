@@ -1,0 +1,174 @@
+---
+author: "Aaron Riedling"
+output: html_document
+---
+
+## Introduction
+
+In this assignment, you will work the dataset `gene_expression_data_wide`. The dataset contains gene expression measurements from two individuals, with 50 measurements per gene.
+You will implement distance metrics, conduct hypothesis testing, and handle multiple testing scenarios.
+
+## Task 1 (30 pts)
+Create a function `calculate_euclidean` that computes the Euclidean distance between two gene expression vectors. Then:
+
+a) Calculate the distance between Person1 and Person2's expression profiles (for each gene seperately)
+b) Visualize the distances between both persons expression profiles
+
+```{r task1_test}
+# Your solution here!
+
+# Load required libraries
+library(ggplot2)
+
+# Load the dataset
+data <- read.csv("gene_expression_data_wide.csv")
+
+# Function to calculate Euclidean distance
+calculate_euclidean <- function(vec1, vec2) {
+  sqrt(sum((vec1 - vec2)^2))
+}
+
+# Task 1a: Calculate distances for each gene
+unique_genes <- unique(data$Gene)  # Identify unique genes
+distances <- data.frame(
+  Gene = character(),
+  Euclidean_Distance = numeric()
+)
+
+for (gene in unique_genes) {
+  gene_data <- subset(data, Gene == gene)
+  distance <- calculate_euclidean(gene_data$Person1, gene_data$Person2)
+  distances <- rbind(distances, data.frame(Gene = gene, Euclidean_Distance = distance))
+}
+
+# Task 1b: Visualize the distances
+ggplot(distances, aes(x = Gene, y = Euclidean_Distance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Euclidean Distances Between Person1 and Person2 for Each Gene",
+       x = "Genes",
+       y = "Euclidean Distance")
+
+
+
+```
+
+## Task 2 (35 pts)
+Analyze the expression differences of GENE_1 between Person1 and Person2:
+
+a) Conduct a t-test to compare expression levels between persons
+b) Visualize the expression distributions using a [violin plot](https://en.wikipedia.org/wiki/Violin_plot)
+
+```{r task2_test}
+# Your solution here!
+
+# Load necessary libraries
+library(ggplot2)
+
+# Task 2a: Conduct a t-test for GENE_1 between Person1 and Person2
+# Subset the data for GENE_1
+gene1_data <- subset(data, Gene == "GENE_1")
+
+# Combine data into a long format for t-test and visualization
+gene1_long <- data.frame(
+  Expression = c(gene1_data$Person1, gene1_data$Person2),
+  Person = rep(c("Person1", "Person2"), each = nrow(gene1_data))
+)
+
+# Perform a t-test
+t_test_result <- t.test(Expression ~ Person, data = gene1_long)
+
+# Print t-test results
+print(t_test_result)
+
+# Task 2b: Create a violin plot to visualize the expression distributions
+ggplot(gene1_long, aes(x = Person, y = Expression, fill = Person)) +
+  geom_violin(trim = FALSE, alpha = 0.7) +
+  geom_boxplot(width = 0.1, position = position_dodge(0.9), alpha = 0.9) + 
+  labs(title = "Expression Distributions of GENE_1",
+       x = "Person",
+       y = "Expression Level") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+
+
+
+
+```
+
+## Task 3 (35 pts)
+Perform a comprehensive analysis across all genes:
+
+a) Conduct t-tests for all genes comparing Person1 vs Person2
+b) Apply Bonferroni correction for multiple testing
+c) Create a summary table with test statistics, p-values, and adjusted p-values
+d) Visualize the results using a [Manhattan plot](https://en.wikipedia.org/wiki/Manhattan_plot)
+
+```{r task3_test}
+# Your solution here!
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+
+
+# Task a: Conduct t-tests for all genes comparing Person1 vs Person2
+# Initialize an empty data frame to store results
+results <- data.frame(Gene = character(),
+                      t_statistic = numeric(),
+                      p_value = numeric(),
+                      stringsAsFactors = FALSE)
+
+# Loop through each gene
+for (gene in unique(data$Gene)) {
+  # Subset the data for the current gene
+  gene_data <- subset(data, Gene == gene)
+  
+  # Conduct a t-test
+  t_test <- t.test(gene_data$Person1, gene_data$Person2)
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Gene = gene,
+    t_statistic = t_test$statistic,
+    p_value = t_test$p.value
+  ))
+}
+
+# Task b: Apply Bonferroni correction for multiple testing
+results$adjusted_p_value <- p.adjust(results$p_value, method = "bonferroni")
+
+# Task c: Create a summary table
+# Add a column indicating whether the test is significant after correction
+results <- results %>%
+  mutate(Significant = adjusted_p_value < 0.05)
+
+# Print the summary table
+print(results)
+
+# Task d: Visualize the results using a Manhattan plot
+# Add a negative log-transformed p-value column for plotting
+results <- results %>%
+  mutate(NegLogP = -log10(p_value))
+
+# Create the Manhattan plot
+ggplot(results, aes(x = Gene, y = NegLogP)) +
+  geom_point(aes(color = Significant), size = 2) +
+  scale_color_manual(values = c("FALSE" = "gray", "TRUE" = "red")) +
+  labs(title = "Manhattan Plot of Gene Expression Differences",
+       x = "Gene",
+       y = "-log10(p-value)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+
+
+
+
+
+
+
+```
